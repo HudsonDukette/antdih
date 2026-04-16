@@ -3,7 +3,7 @@
 <head>
   <title>Ant War+</title>
   <style>
-    body { margin: 0; background: #111; overflow: hidden; }
+    body { margin: 0; overflow: hidden; }
     canvas { display: block; }
   </style>
 </head>
@@ -18,11 +18,11 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 // ----------------------
-// WORLD SETTINGS
+// WORLD
 // ----------------------
 const WORLD_SIZE = 3000;
 
-let camera = { x: 0, y: 0, zoom: 1 };
+let camera = { x: 0, y: 0 };
 
 // ----------------------
 // ENTITIES
@@ -36,7 +36,8 @@ let playerFood = 5;
 let queen = {
   x: WORLD_SIZE / 2,
   y: WORLD_SIZE / 2,
-  hp: 100
+  hp: 100,
+  speed: 3
 };
 
 // ----------------------
@@ -52,10 +53,26 @@ function dist(a, b) {
 
 function worldToScreen(x, y) {
   return {
-    x: (x - camera.x) * camera.zoom,
-    y: (y - camera.y) * camera.zoom
+    x: x - camera.x,
+    y: y - camera.y
   };
 }
+
+// ----------------------
+// DIRT BACKGROUND
+// ----------------------
+let dirtCanvas = document.createElement("canvas");
+dirtCanvas.width = 200;
+dirtCanvas.height = 200;
+let dirtCtx = dirtCanvas.getContext("2d");
+
+// generate dirt pattern
+for (let i = 0; i < 500; i++) {
+  dirtCtx.fillStyle = `rgb(${rand(80,120)},${rand(60,90)},${rand(40,60)})`;
+  dirtCtx.fillRect(rand(0,200), rand(0,200), rand(2,6), rand(2,6));
+}
+
+let dirtPattern = ctx.createPattern(dirtCanvas, "repeat");
 
 // ----------------------
 // SPAWN
@@ -72,16 +89,8 @@ function spawnAnt(type = "worker") {
     carrying: false,
     target: null,
     hp: type === "soldier" ? 50 : 20,
-    type
-  });
-}
-
-function spawnEnemy() {
-  enemies.push({
-    x: rand(0, WORLD_SIZE),
-    y: rand(0, WORLD_SIZE),
-    speed: 1.2,
-    hp: 40
+    type,
+    anim: rand(0, 1000)
   });
 }
 
@@ -100,7 +109,6 @@ window.addEventListener("click", () => {
   }
 });
 
-// Soldier spawn
 window.addEventListener("contextmenu", e => {
   e.preventDefault();
   if (playerFood >= 3) {
@@ -109,57 +117,61 @@ window.addEventListener("contextmenu", e => {
   }
 });
 
-// Zoom
-window.addEventListener("wheel", e => {
-  camera.zoom += e.deltaY * -0.001;
-  camera.zoom = Math.max(0.5, Math.min(2, camera.zoom));
-});
+// ----------------------
+// DRAW ANT (WITH LEGS)
+// ----------------------
+function drawAnt(a, color) {
+  let p = worldToScreen(a.x, a.y);
+
+  let t = Date.now() * 0.01 + a.anim;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+
+  // legs
+  for (let i = -1; i <= 1; i++) {
+    let offset = Math.sin(t + i) * 4;
+
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(p.x + offset, p.y + i * 6);
+    ctx.stroke();
+  }
+
+  // body segments
+  ctx.fillStyle = color;
+
+  ctx.beginPath();
+  ctx.arc(p.x - 4, p.y, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(p.x + 5, p.y, 3, 0, Math.PI * 2);
+  ctx.fill();
+}
 
 // ----------------------
 // GAME LOOP
 // ----------------------
-let enemyTimer = 0;
-
 function update() {
-  // Camera movement
-  if (keys["w"]) camera.y -= 10;
-  if (keys["s"]) camera.y += 10;
-  if (keys["a"]) camera.x -= 10;
-  if (keys["d"]) camera.x += 10;
+  // Queen movement
+  if (keys["w"]) queen.y -= queen.speed;
+  if (keys["s"]) queen.y += queen.speed;
+  if (keys["a"]) queen.x -= queen.speed;
+  if (keys["d"]) queen.x += queen.speed;
 
-  // Keep camera in bounds
-  camera.x = Math.max(0, Math.min(WORLD_SIZE, camera.x));
-  camera.y = Math.max(0, Math.min(WORLD_SIZE, camera.y));
-
-  // Enemies spawn
-  enemyTimer++;
-  if (enemyTimer > 180) {
-    spawnEnemy();
-    enemyTimer = 0;
-  }
+  // camera follows queen
+  camera.x = queen.x - canvas.width / 2;
+  camera.y = queen.y - canvas.height / 2;
 
   // Ant logic
   ants.forEach(ant => {
     if (ant.hp <= 0) return;
 
-    // ATTACK MODE (soldiers prioritize enemies)
-    let targetEnemy = enemies.find(e => dist(ant, e) < 120);
-
-    if (ant.type === "soldier" && targetEnemy) {
-      let dx = targetEnemy.x - ant.x;
-      let dy = targetEnemy.y - ant.y;
-      let d = Math.hypot(dx, dy);
-
-      if (d < 10) {
-        targetEnemy.hp -= 0.6;
-      } else {
-        ant.x += dx / d * ant.speed;
-        ant.y += dy / d * ant.speed;
-      }
-      return;
-    }
-
-    // Worker logic
     if (!ant.carrying) {
       if (!ant.target && food.length > 0) {
         ant.target = food[Math.floor(Math.random() * food.length)];
@@ -194,44 +206,12 @@ function update() {
     }
   });
 
-  // Enemy logic
-  enemies.forEach(e => {
-    let target = queen;
-    let minDist = dist(e, queen);
-
-    ants.forEach(a => {
-      let d = dist(e, a);
-      if (d < minDist) {
-        minDist = d;
-        target = a;
-      }
-    });
-
-    let dx = target.x - e.x;
-    let dy = target.y - e.y;
-    let d = Math.hypot(dx, dy);
-
-    if (d > 0) {
-      e.x += dx / d * e.speed;
-      e.y += dy / d * e.speed;
-    }
-
-    if (d < 10) {
-      if (target === queen) {
-        queen.hp -= 0.1;
-      } else {
-        target.hp -= 0.3;
-      }
-    }
-  });
-
-  // Cleanup
   ants = ants.filter(a => a.hp > 0);
-  enemies = enemies.filter(e => e.hp > 0);
 }
 
 function draw() {
-  ctx.fillStyle = "#111";
+  // dirt background
+  ctx.fillStyle = dirtPattern;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // Food
@@ -239,53 +219,29 @@ function draw() {
   food.forEach(f => {
     let p = worldToScreen(f.x, f.y);
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 4 * camera.zoom, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
     ctx.fill();
   });
 
   // Ants
   ants.forEach(a => {
-    let p = worldToScreen(a.x, a.y);
-    ctx.fillStyle = a.type === "soldier" ? "orange" : "white";
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 3 * camera.zoom, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  // Enemies
-  ctx.fillStyle = "red";
-  enemies.forEach(e => {
-    let p = worldToScreen(e.x, e.y);
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 4 * camera.zoom, 0, Math.PI * 2);
-    ctx.fill();
+    drawAnt(a, a.type === "soldier" ? "orange" : "white");
   });
 
   // Queen
-  let qp = worldToScreen(queen.x, queen.y);
-  ctx.fillStyle = "cyan";
-  ctx.beginPath();
-  ctx.arc(qp.x, qp.y, 10 * camera.zoom, 0, Math.PI * 2);
-  ctx.fill();
+  drawAnt(queen, "cyan");
 
   // UI
   ctx.fillStyle = "white";
-  ctx.font = "16px Arial";
   ctx.fillText("Food: " + playerFood, 10, 20);
   ctx.fillText("Ants: " + ants.length, 10, 40);
   ctx.fillText("HP: " + Math.floor(queen.hp), 10, 60);
-  ctx.fillText("Left click = worker | Right click = soldier", 10, 80);
 }
 
 function loop() {
   update();
   draw();
-
-  if (queen.hp > 0) {
-    requestAnimationFrame(loop);
-  } else {
-    alert("Colony wiped out 💀");
-  }
+  requestAnimationFrame(loop);
 }
 
 loop();
