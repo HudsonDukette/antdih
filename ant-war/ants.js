@@ -6,7 +6,8 @@ function spawnAnt(type) {
     speed: type === "soldier" ? 1.8 : 2.2,
     hp: type === "soldier" ? 60 : 25,
     angle: 0,
-    carrying: false
+    carrying: false,
+    dead: false
   });
 }
 
@@ -21,15 +22,46 @@ function findClosestFood(x, y) {
       best = f;
     }
   }
+
   return best;
 }
 
 function updateAnts() {
+
   for (let a of ants) {
 
-    if (a.type === "soldier") continue;
+    // SOLDIERS (FIXED FULL AI TARGETING)
+    if (a.type === "soldier") {
 
+      let target = findNearestEnemy(a.x, a.y, "player");
+
+      if (target && target.ref) {
+
+        let dx = target.x - a.x;
+        let dy = target.y - a.y;
+        let d = Math.hypot(dx, dy);
+
+        a.angle = Math.atan2(dy, dx);
+
+        if (d < 10) {
+          target.ref.hp -= 1;
+
+          if (target.ref.hp <= 0) {
+            target.ref.dead = true;
+          }
+
+        } else {
+          a.x += Math.cos(a.angle) * a.speed;
+          a.y += Math.sin(a.angle) * a.speed;
+        }
+      }
+
+      continue;
+    }
+
+    // WORKERS
     if (!a.carrying) {
+
       let t = findClosestFood(a.x, a.y);
       if (!t) continue;
 
@@ -49,6 +81,7 @@ function updateAnts() {
       }
 
     } else {
+
       let dx = queen.x - a.x;
       let dy = queen.y - a.y;
       let d = Math.hypot(dx, dy);
@@ -65,5 +98,5 @@ function updateAnts() {
     }
   }
 
-  ants = ants.filter(a => a.hp > 0);
+  ants = ants.filter(a => a.hp > 0 && !a.dead);
 }
