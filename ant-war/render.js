@@ -67,10 +67,15 @@ function draw() {
     let q = c.queen;
     let p = worldToScreen(q.x, q.y);
 
+    let pulse = 6 + Math.sin(Date.now()*0.005) * 2;
+
     ctx.fillStyle = "purple";
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, pulse, 0, Math.PI * 2);
     ctx.fill();
+
+    ctx.fillStyle = "white";
+    ctx.fillText("Q", p.x, p.y - 10);
   }
 
   drawAnt(queen, "cyan");

@@ -9,7 +9,9 @@ function spawnColony(x, y) {
     queen: { x, y, hp: 120, cooldown: 120 },
     workers: [],
     soldiers: [],
-    age: 0
+    age: 0,
+    targetX: x,
+    targetY: y
   });
 }
 
@@ -21,12 +23,14 @@ function updateEnemies() {
 
   for (let c of enemyColonies) {
 
+    if (!c || !c.queen) continue;
     if (!c.workers) c.workers = [];
     if (!c.soldiers) c.soldiers = [];
 
     c.age++;
     c.queen.cooldown--;
 
+    // spawn workers
     if (c.queen.cooldown <= 0) {
       c.workers.push({
         x: c.queen.x,
@@ -36,9 +40,10 @@ function updateEnemies() {
         angle: 0,
         carrying: false
       });
-      c.queen.cooldown = 120;
+      c.queen.cooldown = 100;
     }
 
+    // spawn soldiers
     if (Math.random() < 0.002) {
       c.soldiers.push({
         x: c.queen.x,
@@ -48,6 +53,18 @@ function updateEnemies() {
         angle: 0
       });
     }
+
+    // queen expansion movement (IMPORTANT)
+    if (Math.random() < 0.01) {
+      c.targetX = c.queen.x + rand(-300, 300);
+      c.targetY = c.queen.y + rand(-300, 300);
+    }
+
+    let dxq = c.targetX - c.queen.x;
+    let dyq = c.targetY - c.queen.y;
+
+    c.queen.x += dxq * 0.002;
+    c.queen.y += dyq * 0.002;
 
     // workers
     for (let w of c.workers) {
@@ -70,6 +87,7 @@ function updateEnemies() {
       }
     }
 
+    // soldiers
     for (let s of c.soldiers) {
       let dx = queen.x - s.x;
       let dy = queen.y - s.y;

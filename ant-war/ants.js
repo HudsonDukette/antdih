@@ -1,6 +1,3 @@
-let ants = [];
-let playerFood = 10;
-
 function spawnAnt(type) {
   ants.push({
     x: queen.x,
@@ -30,42 +27,40 @@ function findClosestFood(x, y) {
 function updateAnts() {
   for (let a of ants) {
 
-    if (a.type !== "soldier") {
+    if (a.type === "soldier") continue;
 
-      if (!a.carrying) {
-        let t = findClosestFood(a.x, a.y);
+    if (!a.carrying) {
+      let t = findClosestFood(a.x, a.y);
+      if (!t) continue;
 
-        if (t) {
-          let dx = t.x - a.x;
-          let dy = t.y - a.y;
-          let d = Math.hypot(dx, dy);
+      let dx = t.x - a.x;
+      let dy = t.y - a.y;
+      let d = Math.hypot(dx, dy);
 
-          a.angle = Math.atan2(dy, dx);
+      a.angle = Math.atan2(dy, dx);
 
-          if (d < 6) {
-            let i = food.indexOf(t);
-            if (i !== -1) food.splice(i, 1);
-            a.carrying = true;
-          } else {
-            a.x += Math.cos(a.angle) * a.speed;
-            a.y += Math.sin(a.angle) * a.speed;
-          }
-        }
-
+      if (d < 6) {
+        let i = food.indexOf(t);
+        if (i !== -1) food.splice(i, 1);
+        a.carrying = true;
       } else {
-        let dx = queen.x - a.x;
-        let dy = queen.y - a.y;
-        let d = Math.hypot(dx, dy);
+        a.x += Math.cos(a.angle) * a.speed;
+        a.y += Math.sin(a.angle) * a.speed;
+      }
 
-        a.angle = Math.atan2(dy, dx);
+    } else {
+      let dx = queen.x - a.x;
+      let dy = queen.y - a.y;
+      let d = Math.hypot(dx, dy);
 
-        if (d < 10) {
-          a.carrying = false;
-          playerFood++;
-        } else {
-          a.x += Math.cos(a.angle) * a.speed;
-          a.y += Math.sin(a.angle) * a.speed;
-        }
+      a.angle = Math.atan2(dy, dx);
+
+      if (d < 10) {
+        a.carrying = false;
+        playerFood++;
+      } else {
+        a.x += Math.cos(a.angle) * a.speed;
+        a.y += Math.sin(a.angle) * a.speed;
       }
     }
   }

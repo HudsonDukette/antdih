@@ -9,10 +9,7 @@ const WORLD_SIZE = 5000;
 let camera = { x: 0, y: 0 };
 
 function worldToScreen(x, y) {
-  return {
-    x: x - camera.x,
-    y: y - camera.y
-  };
+  return { x: x - camera.x, y: y - camera.y };
 }
 
 // dirt background
@@ -28,7 +25,7 @@ for (let i = 0; i < 20000; i++) {
   let x = Math.random() * 1200;
   let y = Math.random() * 1200;
   let v = 40 + Math.random() * 40;
-  dctx.fillStyle = `rgb(${v+20}, ${v+10}, ${v})`;
+  dctx.fillStyle = `rgb(${v+20},${v+10},${v})`;
   dctx.fillRect(x, y, 1.2, 1.2);
 }
 

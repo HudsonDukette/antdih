@@ -5,3 +5,6 @@ let queen = {
   speed: 3,
   angle: 0
 };
+
+let ants = [];
+let playerFood = 10;
