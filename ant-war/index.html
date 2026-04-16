@@ -1,17 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Ant War+</title>
+  <title>Ant War</title>
   <style>
     body { margin: 0; overflow: hidden; }
     canvas { display: block; }
   </style>
 </head>
 <body>
+
 <canvas id="game"></canvas>
 
+<!-- CORE ENGINE ORDER (VERY IMPORTANT) -->
 <script src="world.js"></script>
-<script src="food.js"></script>
+<script src="terrain.js"></script>
+<script src="entities.js"></script>
 <script src="ants.js"></script>
 <script src="enemies.js"></script>
 <script src="input.js"></script>
