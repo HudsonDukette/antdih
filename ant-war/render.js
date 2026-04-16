@@ -8,6 +8,8 @@ function drawAnt(a, color) {
   ctx.rotate(a.angle || 0);
 
   ctx.fillStyle = color;
+
+  // body segments (simple ant look)
   ctx.fillRect(-6, -2, 4, 4);
   ctx.fillRect(-2, -3, 5, 5);
   ctx.fillRect(4, -2, 4, 4);
@@ -36,10 +38,10 @@ function drawUI() {
 
     ctx.fillStyle = "white";
     ctx.font = "40px Arial";
-    ctx.fillText("ANT WAR", canvas.width/2 - 100, canvas.height/2);
+    ctx.fillText("ANT WAR", canvas.width / 2 - 100, canvas.height / 2);
 
     ctx.font = "20px Arial";
-    ctx.fillText("Click to Start", canvas.width/2 - 70, canvas.height/2 + 40);
+    ctx.fillText("Click to Start", canvas.width / 2 - 70, canvas.height / 2 + 40);
     return;
   }
 
@@ -53,6 +55,7 @@ function drawUI() {
 function draw() {
   drawWorld();
 
+  // FOOD
   for (let f of food) {
     let p = worldToScreen(f.x, f.y);
     ctx.fillStyle = "lime";
@@ -61,23 +64,35 @@ function draw() {
     ctx.fill();
   }
 
-  for (let a of ants) drawAnt(a, "white");
-
-  for (let c of enemyColonies) {
-    let q = c.queen;
-    let p = worldToScreen(q.x, q.y);
-
-    let pulse = 6 + Math.sin(Date.now()*0.005) * 2;
-
-    ctx.fillStyle = "purple";
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, pulse, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "white";
-    ctx.fillText("Q", p.x, p.y - 10);
+  // PLAYER ANTS
+  for (let a of ants) {
+    drawAnt(a, "white");
   }
 
+  // ENEMY COLONIES (QUEEN + FULL VISUALS)
+  for (let c of enemyColonies) {
+
+    let q = c.queen;
+    let qp = worldToScreen(q.x, q.y);
+
+    // queen (slightly bigger + solid, not just pulse)
+    ctx.fillStyle = "purple";
+    ctx.beginPath();
+    ctx.arc(qp.x, qp.y, 9, 0, Math.PI * 2);
+    ctx.fill();
+
+    // draw WORKERS
+    for (let w of c.workers) {
+      drawAnt(w, "orange");
+    }
+
+    // draw SOLDIERS
+    for (let s of c.soldiers) {
+      drawAnt(s, "red");
+    }
+  }
+
+  // PLAYER QUEEN
   drawAnt(queen, "cyan");
 
   drawUI();
