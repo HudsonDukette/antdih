@@ -12,15 +12,8 @@
 <canvas id="game"></canvas>
 
 <script src="world.js"></script>
-
-<script>
-/* HARD SAFETY BOOTSTRAP (prevents white screen crashes) */
-window.addEventListener("load", () => {
-  if (typeof initTerrain === "function") initTerrain();
-});
-</script>
-
 <script src="terrain.js"></script>
+<script src="food.js"></script>
 <script src="entities.js"></script>
 <script src="ants.js"></script>
 <script src="enemies.js"></script>

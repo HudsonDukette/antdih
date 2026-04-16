@@ -15,26 +15,21 @@ function worldToScreen(x, y) {
   };
 }
 
-// REALISTIC DIRT (NO TILING SNAP)
-function createDirt() {
-  const c = document.createElement("canvas");
-  c.width = 1200;
-  c.height = 1200;
-  const g = c.getContext("2d");
+// dirt background
+const dirtCanvas = document.createElement("canvas");
+dirtCanvas.width = 1200;
+dirtCanvas.height = 1200;
+const dctx = dirtCanvas.getContext("2d");
 
-  g.fillStyle = "#3a2a1e";
-  g.fillRect(0, 0, c.width, c.height);
+dctx.fillStyle = "#3a2a1e";
+dctx.fillRect(0, 0, 1200, 1200);
 
-  for (let i = 0; i < 20000; i++) {
-    let x = Math.random() * c.width;
-    let y = Math.random() * c.height;
-
-    let v = 40 + Math.random() * 40;
-    g.fillStyle = `rgb(${v+20}, ${v+10}, ${v})`;
-    g.fillRect(x, y, 1.2, 1.2);
-  }
-
-  return c;
+for (let i = 0; i < 20000; i++) {
+  let x = Math.random() * 1200;
+  let y = Math.random() * 1200;
+  let v = 40 + Math.random() * 40;
+  dctx.fillStyle = `rgb(${v+20}, ${v+10}, ${v})`;
+  dctx.fillRect(x, y, 1.2, 1.2);
 }
 
-const dirt = createDirt();
+const dirt = dirtCanvas;

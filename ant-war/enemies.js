@@ -6,17 +6,20 @@ function spawnEnemy() {
     y: rand(0, WORLD_SIZE),
     hp: 60,
     speed: 1.2,
-    angle: 0,
-    segments: 3
+    angle: 0
   });
 }
 
 function updateEnemies() {
-
   for (let e of enemies) {
 
-    let target = getClosest(ants, e.x, e.y);
-    if (!target) target = queen;
+    let target = queen;
+
+    for (let a of ants) {
+      let d = Math.hypot(a.x - e.x, a.y - e.y);
+      let q = Math.hypot(queen.x - e.x, queen.y - e.y);
+      if (d < q) target = a;
+    }
 
     let dx = target.x - e.x;
     let dy = target.y - e.y;
@@ -30,8 +33,7 @@ function updateEnemies() {
     }
 
     if (d < 10) {
-      if (target === queen) queen.hp -= 0.2;
-      else target.hp -= 0.4;
+      target.hp -= 0.3;
     }
   }
 
