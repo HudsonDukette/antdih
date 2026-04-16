@@ -4,43 +4,34 @@ function spawnEnemy() {
   enemies.push({
     x: rand(0, WORLD_SIZE),
     y: rand(0, WORLD_SIZE),
+    hp: 60,
     speed: 1.2,
-    hp: 40
+    angle: 0,
+    segments: 3
   });
 }
 
-function getClosestTarget(e) {
-  let best = queen;
-  let bestD = Math.hypot(e.x - queen.x, e.y - queen.y);
-
-  for (let a of ants) {
-    let d = Math.hypot(e.x - a.x, e.y - a.y);
-    if (d < bestD) {
-      bestD = d;
-      best = a;
-    }
-  }
-
-  return best;
-}
-
 function updateEnemies() {
+
   for (let e of enemies) {
 
-    let t = getClosestTarget(e);
+    let target = getClosest(ants, e.x, e.y);
+    if (!target) target = queen;
 
-    let dx = t.x - e.x;
-    let dy = t.y - e.y;
+    let dx = target.x - e.x;
+    let dy = target.y - e.y;
     let d = Math.hypot(dx, dy);
 
+    e.angle = Math.atan2(dy, dx);
+
     if (d > 0) {
-      e.x += dx / d * e.speed;
-      e.y += dy / d * e.speed;
+      e.x += Math.cos(e.angle) * e.speed;
+      e.y += Math.sin(e.angle) * e.speed;
     }
 
     if (d < 10) {
-      if (t === queen) queen.hp -= 0.15;
-      else t.hp -= 0.3;
+      if (target === queen) queen.hp -= 0.2;
+      else target.hp -= 0.4;
     }
   }
 

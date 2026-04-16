@@ -1,10 +1,9 @@
-initFood();
+initTerrain();
 
-for (let i = 0; i < 15; i++) spawnEnemy();
+for (let i = 0; i < 12; i++) spawnEnemy();
 
 function update() {
 
-  // queen movement
   if (keys["w"]) queen.y -= queen.speed;
   if (keys["s"]) queen.y += queen.speed;
   if (keys["a"]) queen.x -= queen.speed;
@@ -13,9 +12,13 @@ function update() {
   camera.x = queen.x - canvas.width / 2;
   camera.y = queen.y - canvas.height / 2;
 
+  updateTerrain();
   updateAnts();
   updateEnemies();
-  updateFood();
+
+  // camera bounds
+  queen.x = Math.max(0, Math.min(WORLD_SIZE, queen.x));
+  queen.y = Math.max(0, Math.min(WORLD_SIZE, queen.y));
 }
 
 function loop() {

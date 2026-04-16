@@ -1,3 +1,11 @@
+function drawEntity(x, y, color, size) {
+  let p = worldToScreen(x, y);
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 function drawAnt(a, color) {
   let p = worldToScreen(a.x, a.y);
 
@@ -5,33 +13,23 @@ function drawAnt(a, color) {
   ctx.translate(p.x, p.y);
   ctx.rotate(a.angle);
 
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1;
-
-  for (let i = -1; i <= 1; i++) {
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(-3, i * 5);
-    ctx.stroke();
-  }
-
+  // segments
   ctx.fillStyle = color;
-  ctx.fillRect(-3, -3, 6, 6);
+  ctx.fillRect(-6, -2, 4, 4);
+  ctx.fillRect(-2, -3, 5, 5);
+  ctx.fillRect(3, -2, 4, 4);
 
   ctx.restore();
 }
 
 function draw() {
-  ctx.fillStyle = "#2f241c";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // dirt
+  ctx.drawImage(dirt, 0, 0, canvas.width, canvas.height);
 
   // food
-  ctx.fillStyle = "lime";
   for (let f of food) {
-    let p = worldToScreen(f.x, f.y);
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
-    ctx.fill();
+    drawEntity(f.x, f.y, "lime", 3);
   }
 
   // ants
@@ -40,24 +38,17 @@ function draw() {
   }
 
   // enemies
-  ctx.fillStyle = "red";
   for (let e of enemies) {
-    let p = worldToScreen(e.x, e.y);
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-    ctx.fill();
+    drawAnt(e, "red");
   }
 
-  // queen
-  let q = worldToScreen(queen.x, queen.y);
-  ctx.fillStyle = "cyan";
-  ctx.beginPath();
-  ctx.arc(q.x, q.y, 8, 0, Math.PI * 2);
-  ctx.fill();
+  // queen (SEGMENTED + HP BAR)
+  drawAnt(queen, "cyan");
 
-  // UI
+  ctx.fillStyle = "red";
+  ctx.fillRect(10, 10, queen.hp, 6);
+
   ctx.fillStyle = "white";
-  ctx.fillText("Food: " + playerFood, 10, 20);
-  ctx.fillText("Ants: " + ants.length, 10, 40);
-  ctx.fillText("Enemies: " + enemies.length, 10, 60);
+  ctx.fillText("Food: " + playerFood, 10, 40);
+  ctx.fillText("Ants: " + ants.length, 10, 60);
 }
