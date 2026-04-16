@@ -2,7 +2,6 @@ function drawAnt(a, color) {
   if (!a) return;
 
   let p = worldToScreen(a.x, a.y);
-  if (!p) return;
 
   ctx.save();
   ctx.translate(p.x, p.y);
@@ -16,60 +15,65 @@ function drawAnt(a, color) {
   ctx.restore();
 }
 
-// SAFE WORLD BACKGROUND (never breaks)
 function drawWorld() {
-  if (!dirt) return;
-
   let x = -camera.x % dirt.width;
   let y = -camera.y % dirt.height;
 
   for (let i = -1; i < 3; i++) {
     for (let j = -1; j < 3; j++) {
-      ctx.drawImage(
-        dirt,
-        x + i * dirt.width,
-        y + j * dirt.height
-      );
+      ctx.drawImage(dirt, x + i * dirt.width, y + j * dirt.height);
     }
   }
 }
 
+function drawUI() {
+
+  if (gameState.mode === "menu") {
+    ctx.fillStyle = "black";
+    ctx.globalAlpha = 0.7;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = "white";
+    ctx.font = "40px Arial";
+    ctx.fillText("ANT WAR", canvas.width/2 - 100, canvas.height/2);
+
+    ctx.font = "20px Arial";
+    ctx.fillText("Click to Start", canvas.width/2 - 70, canvas.height/2 + 40);
+    return;
+  }
+
+  ctx.fillStyle = "white";
+  ctx.font = "14px Arial";
+  ctx.fillText("Food: " + playerFood, 10, 20);
+  ctx.fillText("Ants: " + ants.length, 10, 40);
+  ctx.fillText("Colonies: " + enemyColonies.length, 10, 60);
+}
+
 function draw() {
-  // ALWAYS FIRST (prevents white screen look)
   drawWorld();
 
-  // SAFE FOOD
-  if (Array.isArray(food)) {
-    for (let f of food) {
-      if (!f) continue;
-      let p = worldToScreen(f.x, f.y);
-      ctx.fillStyle = "lime";
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
-      ctx.fill();
-    }
+  for (let f of food) {
+    let p = worldToScreen(f.x, f.y);
+    ctx.fillStyle = "lime";
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+    ctx.fill();
   }
 
-  // SAFE ANTS
-  if (Array.isArray(ants)) {
-    for (let a of ants) drawAnt(a, "white");
+  for (let a of ants) drawAnt(a, "white");
+
+  for (let c of enemyColonies) {
+    let q = c.queen;
+    let p = worldToScreen(q.x, q.y);
+
+    ctx.fillStyle = "purple";
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+    ctx.fill();
   }
 
-  // SAFE ENEMY COLONIES
-  if (Array.isArray(enemyColonies)) {
-    for (let c of enemyColonies) {
-      if (!c || !c.queen) continue;
-
-      let q = c.queen;
-      let p = worldToScreen(q.x, q.y);
-
-      ctx.fillStyle = "purple";
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  // PLAYER QUEEN (always last)
   drawAnt(queen, "cyan");
+
+  drawUI();
 }

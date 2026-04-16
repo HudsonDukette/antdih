@@ -27,40 +27,25 @@ function findClosestFood(x, y) {
   return best;
 }
 
-function findClosestEnemy(x, y) {
-  let best = null;
-  let bestD = Infinity;
-
-  for (let e of enemies) {
-    let d = Math.hypot(e.x - x, e.y - y);
-    if (d < bestD) {
-      bestD = d;
-      best = e;
-    }
-  }
-  return best;
-}
-
 function updateAnts() {
   for (let a of ants) {
 
-    // WORKERS
     if (a.type !== "soldier") {
 
       if (!a.carrying) {
-        let target = findClosestFood(a.x, a.y);
+        let t = findClosestFood(a.x, a.y);
 
-        if (target) {
-          let dx = target.x - a.x;
-          let dy = target.y - a.y;
+        if (t) {
+          let dx = t.x - a.x;
+          let dy = t.y - a.y;
           let d = Math.hypot(dx, dy);
 
           a.angle = Math.atan2(dy, dx);
 
           if (d < 6) {
-            a.carrying = true;
-            let i = food.indexOf(target);
+            let i = food.indexOf(t);
             if (i !== -1) food.splice(i, 1);
+            a.carrying = true;
           } else {
             a.x += Math.cos(a.angle) * a.speed;
             a.y += Math.sin(a.angle) * a.speed;
@@ -77,26 +62,6 @@ function updateAnts() {
         if (d < 10) {
           a.carrying = false;
           playerFood++;
-        } else {
-          a.x += Math.cos(a.angle) * a.speed;
-          a.y += Math.sin(a.angle) * a.speed;
-        }
-      }
-    }
-
-    // SOLDIERS
-    else {
-      let target = findClosestEnemy(a.x, a.y);
-
-      if (target) {
-        let dx = target.x - a.x;
-        let dy = target.y - a.y;
-        let d = Math.hypot(dx, dy);
-
-        a.angle = Math.atan2(dy, dx);
-
-        if (d < 10) {
-          target.hp -= 0.8;
         } else {
           a.x += Math.cos(a.angle) * a.speed;
           a.y += Math.sin(a.angle) * a.speed;
