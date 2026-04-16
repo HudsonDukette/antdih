@@ -4,7 +4,7 @@ function rand(min, max) {
   return Math.random() * (max - min) + min;
 }
 
-// ALWAYS safe colony creation
+// SAFE COLONY CREATION
 function spawnColony(x, y) {
   enemyColonies.push({
     queen: {
@@ -14,18 +14,15 @@ function spawnColony(x, y) {
       cooldown: 120
     },
     workers: [],
-    soldiers: [],
+    soldiers: [], // ALWAYS EXISTS (critical fix)
     age: 0
   });
 }
 
-// INITIAL COLONIES (guaranteed run once)
+// INIT COLONIES
 if (enemyColonies.length === 0) {
   for (let i = 0; i < 5; i++) {
-    spawnColony(
-      rand(0, WORLD_SIZE),
-      rand(0, WORLD_SIZE)
-    );
+    spawnColony(rand(0, WORLD_SIZE), rand(0, WORLD_SIZE));
   }
 }
 
@@ -33,8 +30,11 @@ function updateEnemies() {
 
   for (let c of enemyColonies) {
 
-    // SAFETY CHECK (prevents crashes)
-    if (!c || !c.queen) continue;
+    // HARD SAFETY CHECKS
+    if (!c) continue;
+    if (!c.queen) continue;
+    if (!Array.isArray(c.workers)) c.workers = [];
+    if (!Array.isArray(c.soldiers)) c.soldiers = [];
 
     c.age++;
     c.queen.cooldown--;
@@ -54,7 +54,7 @@ function updateEnemies() {
       c.queen.cooldown = 120;
     }
 
-    // ===== SPAWN SOLDIERS =====
+    // ===== SPAWN SOLDIERS (SAFE) =====
     if (Math.random() < 0.002) {
       c.soldiers.push({
         x: c.queen.x,
@@ -66,7 +66,7 @@ function updateEnemies() {
       });
     }
 
-    // ===== SPAWN NEW COLONY (QUEEN SPLIT) =====
+    // ===== NEW COLONY SPAWN =====
     if (c.age > 2500 && Math.random() < 0.0006) {
       spawnColony(
         c.queen.x + rand(-250, 250),
@@ -76,37 +76,34 @@ function updateEnemies() {
 
     // ===== WORKERS =====
     for (let a of c.workers) {
-
       if (!a) continue;
 
       let target = findClosestFood(a.x, a.y);
+      if (!target) continue;
 
-      if (target) {
-        let dx = target.x - a.x;
-        let dy = target.y - a.y;
-        let d = Math.hypot(dx, dy);
+      let dx = target.x - a.x;
+      let dy = target.y - a.y;
+      let d = Math.hypot(dx, dy);
 
-        a.angle = Math.atan2(dy, dx);
+      a.angle = Math.atan2(dy, dx);
 
-        if (d < 6) {
-          let i = food.indexOf(target);
-          if (i !== -1) food.splice(i, 1);
-          a.carrying = true;
-        } else {
-          a.x += Math.cos(a.angle) * a.speed;
-          a.y += Math.sin(a.angle) * a.speed;
-        }
+      if (d < 6) {
+        let i = food.indexOf(target);
+        if (i !== -1) food.splice(i, 1);
+        a.carrying = true;
+      } else {
+        a.x += Math.cos(a.angle) * a.speed;
+        a.y += Math.sin(a.angle) * a.speed;
       }
 
-      // return food
       if (a.carrying) {
-        let dx = c.queen.x - a.x;
-        let dy = c.queen.y - a.y;
-        let d = Math.hypot(dx, dy);
+        let dx2 = c.queen.x - a.x;
+        let dy2 = c.queen.y - a.y;
+        let d2 = Math.hypot(dx2, dy2);
 
-        a.angle = Math.atan2(dy, dx);
+        a.angle = Math.atan2(dy2, dx2);
 
-        if (d < 10) {
+        if (d2 < 10) {
           a.carrying = false;
           playerFood++;
         } else {
@@ -116,9 +113,8 @@ function updateEnemies() {
       }
     }
 
-    // ===== SOLDIERS (SAFE) =====
+    // ===== SOLDIERS (SAFE ATTACK) =====
     for (let s of c.soldiers) {
-
       if (!s) continue;
 
       let dx = queen.x - s.x;
@@ -135,7 +131,7 @@ function updateEnemies() {
       }
     }
 
-    // cleanup safety
+    // CLEANUP
     c.workers = c.workers.filter(w => w && w.hp > 0);
     c.soldiers = c.soldiers.filter(s => s && s.hp > 0);
   }
