@@ -11,8 +11,15 @@
 
 <canvas id="game"></canvas>
 
-<!-- CORE ENGINE ORDER (VERY IMPORTANT) -->
 <script src="world.js"></script>
+
+<script>
+/* HARD SAFETY BOOTSTRAP (prevents white screen crashes) */
+window.addEventListener("load", () => {
+  if (typeof initTerrain === "function") initTerrain();
+});
+</script>
+
 <script src="terrain.js"></script>
 <script src="entities.js"></script>
 <script src="ants.js"></script>
