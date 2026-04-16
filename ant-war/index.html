@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Ant War Lite</title>
+  <title>Ant War+</title>
   <style>
     body { margin: 0; background: #111; overflow: hidden; }
     canvas { display: block; }
@@ -17,18 +17,31 @@ const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
+// ----------------------
+// WORLD SETTINGS
+// ----------------------
+const WORLD_SIZE = 3000;
+
+let camera = { x: 0, y: 0, zoom: 1 };
+
+// ----------------------
+// ENTITIES
+// ----------------------
 let ants = [];
 let enemies = [];
 let food = [];
 
-let playerFood = 0;
+let playerFood = 5;
 
 let queen = {
-  x: canvas.width / 2,
-  y: canvas.height / 2,
+  x: WORLD_SIZE / 2,
+  y: WORLD_SIZE / 2,
   hp: 100
 };
 
+// ----------------------
+// HELPERS
+// ----------------------
 function rand(min, max) {
   return Math.random() * (max - min) + min;
 }
@@ -37,59 +50,90 @@ function dist(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-// Spawn food
-for (let i = 0; i < 50; i++) {
-  food.push({ x: rand(0, canvas.width), y: rand(0, canvas.height) });
+function worldToScreen(x, y) {
+  return {
+    x: (x - camera.x) * camera.zoom,
+    y: (y - camera.y) * camera.zoom
+  };
 }
 
-// Spawn ant
-function spawnAnt() {
+// ----------------------
+// SPAWN
+// ----------------------
+for (let i = 0; i < 100; i++) {
+  food.push({ x: rand(0, WORLD_SIZE), y: rand(0, WORLD_SIZE) });
+}
+
+function spawnAnt(type = "worker") {
   ants.push({
     x: queen.x,
     y: queen.y,
-    speed: rand(1, 2),
+    speed: type === "soldier" ? 1.5 : 2,
     carrying: false,
     target: null,
-    hp: 20
+    hp: type === "soldier" ? 50 : 20,
+    type
   });
 }
 
-// Spawn enemy
 function spawnEnemy() {
   enemies.push({
-    x: rand(0, canvas.width),
-    y: rand(0, canvas.height),
-    speed: rand(1, 1.5),
-    hp: 25
+    x: rand(0, WORLD_SIZE),
+    y: rand(0, WORLD_SIZE),
+    speed: 1.2,
+    hp: 40
   });
 }
 
-// Mouse movement
-let mouse = { x: queen.x, y: queen.y };
-window.addEventListener("mousemove", e => {
-  mouse.x = e.clientX;
-  mouse.y = e.clientY;
-});
+// ----------------------
+// INPUT
+// ----------------------
+let keys = {};
+window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
-// Click to spawn ants
+// Spawn ants
 window.addEventListener("click", () => {
-  if (playerFood > 0) {
-    spawnAnt();
+  if (playerFood >= 1) {
+    spawnAnt("worker");
     playerFood--;
   }
 });
 
-// Game loop
+// Soldier spawn
+window.addEventListener("contextmenu", e => {
+  e.preventDefault();
+  if (playerFood >= 3) {
+    spawnAnt("soldier");
+    playerFood -= 3;
+  }
+});
+
+// Zoom
+window.addEventListener("wheel", e => {
+  camera.zoom += e.deltaY * -0.001;
+  camera.zoom = Math.max(0.5, Math.min(2, camera.zoom));
+});
+
+// ----------------------
+// GAME LOOP
+// ----------------------
 let enemyTimer = 0;
 
 function update() {
-  // Move queen
-  queen.x += (mouse.x - queen.x) * 0.05;
-  queen.y += (mouse.y - queen.y) * 0.05;
+  // Camera movement
+  if (keys["w"]) camera.y -= 10;
+  if (keys["s"]) camera.y += 10;
+  if (keys["a"]) camera.x -= 10;
+  if (keys["d"]) camera.x += 10;
 
-  // Spawn enemies
+  // Keep camera in bounds
+  camera.x = Math.max(0, Math.min(WORLD_SIZE, camera.x));
+  camera.y = Math.max(0, Math.min(WORLD_SIZE, camera.y));
+
+  // Enemies spawn
   enemyTimer++;
-  if (enemyTimer > 120) {
+  if (enemyTimer > 180) {
     spawnEnemy();
     enemyTimer = 0;
   }
@@ -98,6 +142,24 @@ function update() {
   ants.forEach(ant => {
     if (ant.hp <= 0) return;
 
+    // ATTACK MODE (soldiers prioritize enemies)
+    let targetEnemy = enemies.find(e => dist(ant, e) < 120);
+
+    if (ant.type === "soldier" && targetEnemy) {
+      let dx = targetEnemy.x - ant.x;
+      let dy = targetEnemy.y - ant.y;
+      let d = Math.hypot(dx, dy);
+
+      if (d < 10) {
+        targetEnemy.hp -= 0.6;
+      } else {
+        ant.x += dx / d * ant.speed;
+        ant.y += dy / d * ant.speed;
+      }
+      return;
+    }
+
+    // Worker logic
     if (!ant.carrying) {
       if (!ant.target && food.length > 0) {
         ant.target = food[Math.floor(Math.random() * food.length)];
@@ -162,6 +224,10 @@ function update() {
       }
     }
   });
+
+  // Cleanup
+  ants = ants.filter(a => a.hp > 0);
+  enemies = enemies.filter(e => e.hp > 0);
 }
 
 function draw() {
@@ -171,31 +237,35 @@ function draw() {
   // Food
   ctx.fillStyle = "lime";
   food.forEach(f => {
+    let p = worldToScreen(f.x, f.y);
     ctx.beginPath();
-    ctx.arc(f.x, f.y, 4, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, 4 * camera.zoom, 0, Math.PI * 2);
     ctx.fill();
   });
 
   // Ants
-  ctx.fillStyle = "white";
   ants.forEach(a => {
+    let p = worldToScreen(a.x, a.y);
+    ctx.fillStyle = a.type === "soldier" ? "orange" : "white";
     ctx.beginPath();
-    ctx.arc(a.x, a.y, 3, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, 3 * camera.zoom, 0, Math.PI * 2);
     ctx.fill();
   });
 
   // Enemies
   ctx.fillStyle = "red";
   enemies.forEach(e => {
+    let p = worldToScreen(e.x, e.y);
     ctx.beginPath();
-    ctx.arc(e.x, e.y, 4, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, 4 * camera.zoom, 0, Math.PI * 2);
     ctx.fill();
   });
 
   // Queen
+  let qp = worldToScreen(queen.x, queen.y);
   ctx.fillStyle = "cyan";
   ctx.beginPath();
-  ctx.arc(queen.x, queen.y, 10, 0, Math.PI * 2);
+  ctx.arc(qp.x, qp.y, 10 * camera.zoom, 0, Math.PI * 2);
   ctx.fill();
 
   // UI
@@ -204,6 +274,7 @@ function draw() {
   ctx.fillText("Food: " + playerFood, 10, 20);
   ctx.fillText("Ants: " + ants.length, 10, 40);
   ctx.fillText("HP: " + Math.floor(queen.hp), 10, 60);
+  ctx.fillText("Left click = worker | Right click = soldier", 10, 80);
 }
 
 function loop() {
@@ -213,7 +284,7 @@ function loop() {
   if (queen.hp > 0) {
     requestAnimationFrame(loop);
   } else {
-    alert("Game Over");
+    alert("Colony wiped out 💀");
   }
 }
 
