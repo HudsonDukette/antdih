@@ -3,7 +3,7 @@
 <head>
   <title>Ant War+</title>
   <style>
-    body { margin: 0; overflow: hidden; }
+    body { margin: 0; overflow: hidden; background: #000; }
     canvas { display: block; }
   </style>
 </head>
@@ -17,20 +17,18 @@ const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// ----------------------
-// WORLD
-// ----------------------
+// ======================
+// WORLD SETTINGS
+// ======================
 const WORLD_SIZE = 3000;
 
 let camera = { x: 0, y: 0 };
 
-// ----------------------
+// ======================
 // ENTITIES
-// ----------------------
+// ======================
 let ants = [];
-let enemies = [];
 let food = [];
-
 let playerFood = 5;
 
 let queen = {
@@ -40,15 +38,11 @@ let queen = {
   speed: 3
 };
 
-// ----------------------
+// ======================
 // HELPERS
-// ----------------------
+// ======================
 function rand(min, max) {
   return Math.random() * (max - min) + min;
-}
-
-function dist(a, b) {
-  return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
 function worldToScreen(x, y) {
@@ -58,68 +52,90 @@ function worldToScreen(x, y) {
   };
 }
 
-// ----------------------
-// DIRT BACKGROUND
-// ----------------------
-let dirtCanvas = document.createElement("canvas");
-dirtCanvas.width = 200;
-dirtCanvas.height = 200;
-let dirtCtx = dirtCanvas.getContext("2d");
+// ======================
+// DIRT TEXTURE (NO TILING LOOK)
+// ======================
+function createDirtTexture(size = 1000) {
+  const c = document.createElement("canvas");
+  c.width = size;
+  c.height = size;
+  const g = c.getContext("2d");
 
-// generate dirt pattern
-for (let i = 0; i < 500; i++) {
-  dirtCtx.fillStyle = `rgb(${rand(80,120)},${rand(60,90)},${rand(40,60)})`;
-  dirtCtx.fillRect(rand(0,200), rand(0,200), rand(2,6), rand(2,6));
+  g.fillStyle = "#3b2a1f";
+  g.fillRect(0, 0, size, size);
+
+  // fine noise
+  for (let i = 0; i < 8000; i++) {
+    let x = Math.random() * size;
+    let y = Math.random() * size;
+
+    let shade = 30 + Math.random() * 50;
+    g.fillStyle = `rgb(${shade + 20}, ${shade + 10}, ${shade})`;
+
+    g.fillRect(x, y, 1.5, 1.5);
+  }
+
+  // dirt clumps
+  for (let i = 0; i < 500; i++) {
+    let x = Math.random() * size;
+    let y = Math.random() * size;
+
+    g.fillStyle = `rgba(15, 10, 8, 0.15)`;
+
+    g.beginPath();
+    g.ellipse(
+      x,
+      y,
+      10 + Math.random() * 25,
+      6 + Math.random() * 20,
+      Math.random(),
+      0,
+      Math.PI * 2
+    );
+    g.fill();
+  }
+
+  return c;
 }
 
-let dirtPattern = ctx.createPattern(dirtCanvas, "repeat");
+const dirt = createDirtTexture(1200);
 
-// ----------------------
-// SPAWN
-// ----------------------
-for (let i = 0; i < 100; i++) {
-  food.push({ x: rand(0, WORLD_SIZE), y: rand(0, WORLD_SIZE) });
-}
-
-function spawnAnt(type = "worker") {
-  ants.push({
-    x: queen.x,
-    y: queen.y,
-    speed: type === "soldier" ? 1.5 : 2,
-    carrying: false,
-    target: null,
-    hp: type === "soldier" ? 50 : 20,
-    type,
-    anim: rand(0, 1000)
-  });
-}
-
-// ----------------------
+// ======================
 // INPUT
-// ----------------------
+// ======================
 let keys = {};
 window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
 window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
-// Spawn ants
+// spawn ants
 window.addEventListener("click", () => {
-  if (playerFood >= 1) {
-    spawnAnt("worker");
+  if (playerFood > 0) {
+    ants.push({
+      x: queen.x,
+      y: queen.y,
+      speed: 2,
+      carrying: false,
+      target: null,
+      hp: 20,
+      anim: Math.random() * 1000
+    });
     playerFood--;
   }
 });
 
-window.addEventListener("contextmenu", e => {
-  e.preventDefault();
-  if (playerFood >= 3) {
-    spawnAnt("soldier");
-    playerFood -= 3;
-  }
-});
+// ======================
+// FOOD
+// ======================
+for (let i = 0; i < 120; i++) {
+  food.push({
+    x: rand(0, WORLD_SIZE),
+    y: rand(0, WORLD_SIZE)
+  });
+}
 
-// ----------------------
-// DRAW ANT (WITH LEGS)
-// ----------------------
+// ======================
+// DRAW ANT (ANIMATED)
+// ======================
 function drawAnt(a, color) {
   let p = worldToScreen(a.x, a.y);
 
@@ -128,13 +144,13 @@ function drawAnt(a, color) {
   ctx.strokeStyle = color;
   ctx.lineWidth = 1;
 
-  // legs
+  // legs animation
   for (let i = -1; i <= 1; i++) {
-    let offset = Math.sin(t + i) * 4;
+    let swing = Math.sin(t + i) * 4;
 
     ctx.beginPath();
     ctx.moveTo(p.x, p.y);
-    ctx.lineTo(p.x + offset, p.y + i * 6);
+    ctx.lineTo(p.x + swing, p.y + i * 6);
     ctx.stroke();
   }
 
@@ -154,11 +170,11 @@ function drawAnt(a, color) {
   ctx.fill();
 }
 
-// ----------------------
-// GAME LOOP
-// ----------------------
+// ======================
+// UPDATE
+// ======================
 function update() {
-  // Queen movement
+  // queen movement
   if (keys["w"]) queen.y -= queen.speed;
   if (keys["s"]) queen.y += queen.speed;
   if (keys["a"]) queen.x -= queen.speed;
@@ -168,53 +184,57 @@ function update() {
   camera.x = queen.x - canvas.width / 2;
   camera.y = queen.y - canvas.height / 2;
 
-  // Ant logic
-  ants.forEach(ant => {
-    if (ant.hp <= 0) return;
-
-    if (!ant.carrying) {
-      if (!ant.target && food.length > 0) {
-        ant.target = food[Math.floor(Math.random() * food.length)];
+  // ants logic
+  ants.forEach(a => {
+    if (!a.carrying) {
+      if (!a.target && food.length > 0) {
+        a.target = food[Math.floor(Math.random() * food.length)];
       }
 
-      if (ant.target) {
-        let dx = ant.target.x - ant.x;
-        let dy = ant.target.y - ant.y;
+      if (a.target) {
+        let dx = a.target.x - a.x;
+        let dy = a.target.y - a.y;
         let d = Math.hypot(dx, dy);
 
         if (d < 5) {
-          ant.carrying = true;
-          food = food.filter(f => f !== ant.target);
-          ant.target = null;
+          a.carrying = true;
+          food = food.filter(f => f !== a.target);
+          a.target = null;
         } else {
-          ant.x += dx / d * ant.speed;
-          ant.y += dy / d * ant.speed;
+          a.x += dx / d * a.speed;
+          a.y += dy / d * a.speed;
         }
       }
     } else {
-      let dx = queen.x - ant.x;
-      let dy = queen.y - ant.y;
+      let dx = queen.x - a.x;
+      let dy = queen.y - a.y;
       let d = Math.hypot(dx, dy);
 
       if (d < 10) {
-        ant.carrying = false;
+        a.carrying = false;
         playerFood++;
       } else {
-        ant.x += dx / d * ant.speed;
-        ant.y += dy / d * ant.speed;
+        a.x += dx / d * a.speed;
+        a.y += dy / d * a.speed;
       }
     }
   });
-
-  ants = ants.filter(a => a.hp > 0);
 }
 
+// ======================
+// DRAW
+// ======================
 function draw() {
-  // dirt background
-  ctx.fillStyle = dirtPattern;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // background (no tiling visible)
+  let x = -camera.x % dirt.width;
+  let y = -camera.y % dirt.height;
 
-  // Food
+  ctx.drawImage(dirt, x, y);
+  ctx.drawImage(dirt, x - dirt.width, y);
+  ctx.drawImage(dirt, x, y - dirt.height);
+  ctx.drawImage(dirt, x - dirt.width, y - dirt.height);
+
+  // food
   ctx.fillStyle = "lime";
   food.forEach(f => {
     let p = worldToScreen(f.x, f.y);
@@ -223,21 +243,22 @@ function draw() {
     ctx.fill();
   });
 
-  // Ants
-  ants.forEach(a => {
-    drawAnt(a, a.type === "soldier" ? "orange" : "white");
-  });
+  // ants
+  ants.forEach(a => drawAnt(a, "white"));
 
-  // Queen
+  // queen
   drawAnt(queen, "cyan");
 
   // UI
   ctx.fillStyle = "white";
   ctx.fillText("Food: " + playerFood, 10, 20);
   ctx.fillText("Ants: " + ants.length, 10, 40);
-  ctx.fillText("HP: " + Math.floor(queen.hp), 10, 60);
+  ctx.fillText("Move: WASD | Click = spawn ant", 10, 60);
 }
 
+// ======================
+// LOOP
+// ======================
 function loop() {
   update();
   draw();
