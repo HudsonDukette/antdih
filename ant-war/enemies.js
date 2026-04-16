@@ -4,7 +4,7 @@ function rand(min, max) {
   return Math.random() * (max - min) + min;
 }
 
-// create a colony
+// ALWAYS safe colony creation
 function spawnColony(x, y) {
   enemyColonies.push({
     queen: {
@@ -19,18 +19,27 @@ function spawnColony(x, y) {
   });
 }
 
-// initial colonies
-for (let i = 0; i < 5; i++) {
-  spawnColony(rand(0, WORLD_SIZE), rand(0, WORLD_SIZE));
+// INITIAL COLONIES (guaranteed run once)
+if (enemyColonies.length === 0) {
+  for (let i = 0; i < 5; i++) {
+    spawnColony(
+      rand(0, WORLD_SIZE),
+      rand(0, WORLD_SIZE)
+    );
+  }
 }
 
 function updateEnemies() {
 
   for (let c of enemyColonies) {
+
+    // SAFETY CHECK (prevents crashes)
+    if (!c || !c.queen) continue;
+
     c.age++;
     c.queen.cooldown--;
 
-    // spawn worker
+    // ===== SPAWN WORKERS =====
     if (c.queen.cooldown <= 0) {
       c.workers.push({
         x: c.queen.x,
@@ -45,7 +54,7 @@ function updateEnemies() {
       c.queen.cooldown = 120;
     }
 
-    // spawn soldier randomly
+    // ===== SPAWN SOLDIERS =====
     if (Math.random() < 0.002) {
       c.soldiers.push({
         x: c.queen.x,
@@ -57,8 +66,8 @@ function updateEnemies() {
       });
     }
 
-    // spawn new colony (new queen)
-    if (c.age > 3000 && Math.random() < 0.0008) {
+    // ===== SPAWN NEW COLONY (QUEEN SPLIT) =====
+    if (c.age > 2500 && Math.random() < 0.0006) {
       spawnColony(
         c.queen.x + rand(-250, 250),
         c.queen.y + rand(-250, 250)
@@ -67,6 +76,8 @@ function updateEnemies() {
 
     // ===== WORKERS =====
     for (let a of c.workers) {
+
+      if (!a) continue;
 
       let target = findClosestFood(a.x, a.y);
 
@@ -87,6 +98,7 @@ function updateEnemies() {
         }
       }
 
+      // return food
       if (a.carrying) {
         let dx = c.queen.x - a.x;
         let dy = c.queen.y - a.y;
@@ -104,8 +116,10 @@ function updateEnemies() {
       }
     }
 
-    // ===== SOLDIERS =====
+    // ===== SOLDIERS (SAFE) =====
     for (let s of c.soldiers) {
+
+      if (!s) continue;
 
       let dx = queen.x - s.x;
       let dy = queen.y - s.y;
@@ -121,8 +135,8 @@ function updateEnemies() {
       }
     }
 
-    // cleanup
-    c.workers = c.workers.filter(w => w.hp > 0);
-    c.soldiers = c.soldiers.filter(s => s.hp > 0);
+    // cleanup safety
+    c.workers = c.workers.filter(w => w && w.hp > 0);
+    c.soldiers = c.soldiers.filter(s => s && s.hp > 0);
   }
 }
