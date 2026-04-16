@@ -17,18 +17,27 @@ const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// ======================
-// WORLD SETTINGS
-// ======================
-const WORLD_SIZE = 3000;
+// =========================
+// WORLD
+// =========================
+const WORLD_SIZE = 4000;
 
 let camera = { x: 0, y: 0 };
 
-// ======================
+function worldToScreen(x, y) {
+  return {
+    x: x - camera.x,
+    y: y - camera.y
+  };
+}
+
+// =========================
 // ENTITIES
-// ======================
+// =========================
 let ants = [];
+let enemies = [];
 let food = [];
+
 let playerFood = 5;
 
 let queen = {
@@ -38,153 +47,115 @@ let queen = {
   speed: 3
 };
 
-// ======================
-// HELPERS
-// ======================
-function rand(min, max) {
-  return Math.random() * (max - min) + min;
-}
-
-function worldToScreen(x, y) {
-  return {
-    x: x - camera.x,
-    y: y - camera.y
-  };
-}
-
-// ======================
-// DIRT TEXTURE (NO TILING LOOK)
-// ======================
-function createDirtTexture(size = 1000) {
-  const c = document.createElement("canvas");
-  c.width = size;
-  c.height = size;
-  const g = c.getContext("2d");
-
-  g.fillStyle = "#3b2a1f";
-  g.fillRect(0, 0, size, size);
-
-  // fine noise
-  for (let i = 0; i < 8000; i++) {
-    let x = Math.random() * size;
-    let y = Math.random() * size;
-
-    let shade = 30 + Math.random() * 50;
-    g.fillStyle = `rgb(${shade + 20}, ${shade + 10}, ${shade})`;
-
-    g.fillRect(x, y, 1.5, 1.5);
-  }
-
-  // dirt clumps
-  for (let i = 0; i < 500; i++) {
-    let x = Math.random() * size;
-    let y = Math.random() * size;
-
-    g.fillStyle = `rgba(15, 10, 8, 0.15)`;
-
-    g.beginPath();
-    g.ellipse(
-      x,
-      y,
-      10 + Math.random() * 25,
-      6 + Math.random() * 20,
-      Math.random(),
-      0,
-      Math.PI * 2
-    );
-    g.fill();
-  }
-
-  return c;
-}
-
-const dirt = createDirtTexture(1200);
-
-// ======================
+// =========================
 // INPUT
-// ======================
+// =========================
 let keys = {};
+
 window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
 window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
-// spawn ants
+// LEFT CLICK = worker
 window.addEventListener("click", () => {
   if (playerFood > 0) {
-    ants.push({
-      x: queen.x,
-      y: queen.y,
-      speed: 2,
-      carrying: false,
-      target: null,
-      hp: 20,
-      anim: Math.random() * 1000
-    });
+    spawnAnt("worker");
     playerFood--;
   }
 });
 
-// ======================
-// FOOD
-// ======================
-for (let i = 0; i < 120; i++) {
+// RIGHT CLICK = soldier
+window.addEventListener("contextmenu", e => {
+  e.preventDefault();
+  if (playerFood >= 3) {
+    spawnAnt("soldier");
+    playerFood -= 3;
+  }
+});
+
+// =========================
+// SPAWNING SYSTEMS
+// =========================
+function rand(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+function spawnAnt(type) {
+  ants.push({
+    x: queen.x,
+    y: queen.y,
+    type,
+    speed: type === "soldier" ? 1.6 : 2.2,
+    carrying: false,
+    target: null,
+    hp: type === "soldier" ? 50 : 20,
+    anim: Math.random() * 1000
+  });
+}
+
+function spawnEnemy() {
+  enemies.push({
+    x: rand(0, WORLD_SIZE),
+    y: rand(0, WORLD_SIZE),
+    speed: 1.2,
+    hp: 40
+  });
+}
+
+// =========================
+// INITIAL SPAWNS
+// =========================
+for (let i = 0; i < 200; i++) {
   food.push({
     x: rand(0, WORLD_SIZE),
     y: rand(0, WORLD_SIZE)
   });
 }
 
-// ======================
-// DRAW ANT (ANIMATED)
-// ======================
-function drawAnt(a, color) {
-  let p = worldToScreen(a.x, a.y);
-
-  let t = Date.now() * 0.01 + a.anim;
-
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1;
-
-  // legs animation
-  for (let i = -1; i <= 1; i++) {
-    let swing = Math.sin(t + i) * 4;
-
-    ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
-    ctx.lineTo(p.x + swing, p.y + i * 6);
-    ctx.stroke();
-  }
-
-  // body segments
-  ctx.fillStyle = color;
-
-  ctx.beginPath();
-  ctx.arc(p.x - 4, p.y, 3, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.arc(p.x + 5, p.y, 3, 0, Math.PI * 2);
-  ctx.fill();
+for (let i = 0; i < 15; i++) {
+  spawnEnemy();
 }
 
-// ======================
-// UPDATE
-// ======================
-function update() {
-  // queen movement
+// =========================
+// FOOD SYSTEM (AUTO REGROW)
+// =========================
+function updateFood() {
+  while (food.length < 200) {
+    food.push({
+      x: rand(0, WORLD_SIZE),
+      y: rand(0, WORLD_SIZE)
+    });
+  }
+}
+
+// =========================
+// ENEMY SYSTEM (AUTO REGROW)
+// =========================
+function updateEnemies() {
+  while (enemies.length < 20) {
+    spawnEnemy();
+  }
+}
+
+// =========================
+// QUEEN MOVEMENT
+// =========================
+function updateQueen() {
   if (keys["w"]) queen.y -= queen.speed;
   if (keys["s"]) queen.y += queen.speed;
   if (keys["a"]) queen.x -= queen.speed;
   if (keys["d"]) queen.x += queen.speed;
 
-  // camera follows queen
+  queen.x = Math.max(0, Math.min(WORLD_SIZE, queen.x));
+  queen.y = Math.max(0, Math.min(WORLD_SIZE, queen.y));
+
   camera.x = queen.x - canvas.width / 2;
   camera.y = queen.y - canvas.height / 2;
+}
 
-  // ants logic
+// =========================
+// ANT AI
+// =========================
+function updateAnts() {
   ants.forEach(a => {
     if (!a.carrying) {
       if (!a.target && food.length > 0) {
@@ -196,7 +167,7 @@ function update() {
         let dy = a.target.y - a.y;
         let d = Math.hypot(dx, dy);
 
-        if (d < 5) {
+        if (d < 6) {
           a.carrying = true;
           food = food.filter(f => f !== a.target);
           a.target = null;
@@ -219,32 +190,102 @@ function update() {
       }
     }
   });
+
+  ants = ants.filter(a => a.hp > 0);
 }
 
-// ======================
-// DRAW
-// ======================
-function draw() {
-  // background (no tiling visible)
-  let x = -camera.x % dirt.width;
-  let y = -camera.y % dirt.height;
+// =========================
+// ENEMY AI
+// =========================
+function updateEnemies() {
+  enemies.forEach(e => {
+    let target = queen;
+    let minDist = Math.hypot(e.x - queen.x, e.y - queen.y);
 
-  ctx.drawImage(dirt, x, y);
-  ctx.drawImage(dirt, x - dirt.width, y);
-  ctx.drawImage(dirt, x, y - dirt.height);
-  ctx.drawImage(dirt, x - dirt.width, y - dirt.height);
+    ants.forEach(a => {
+      let d = Math.hypot(e.x - a.x, e.y - a.y);
+      if (d < minDist) {
+        minDist = d;
+        target = a;
+      }
+    });
 
-  // food
-  ctx.fillStyle = "lime";
-  food.forEach(f => {
-    let p = worldToScreen(f.x, f.y);
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-    ctx.fill();
+    let dx = target.x - e.x;
+    let dy = target.y - e.y;
+    let d = Math.hypot(dx, dy);
+
+    if (d > 0) {
+      e.x += dx / d * e.speed;
+      e.y += dy / d * e.speed;
+    }
+
+    if (d < 10) {
+      if (target === queen) queen.hp -= 0.15;
+      else target.hp -= 0.3;
+    }
   });
 
+  enemies = enemies.filter(e => e.hp > 0);
+}
+
+// =========================
+// DRAW
+// =========================
+function drawBackground() {
+  ctx.fillStyle = "#2f241c";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawEntity(x, y, color, size) {
+  let p = worldToScreen(x, y);
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawAnt(a, color) {
+  let p = worldToScreen(a.x, a.y);
+
+  let t = Date.now() * 0.01 + a.anim;
+
+  ctx.strokeStyle = color;
+
+  for (let i = -1; i <= 1; i++) {
+    let swing = Math.sin(t + i) * 4;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(p.x + swing, p.y + i * 6);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// =========================
+// MAIN LOOP
+// =========================
+function update() {
+  updateQueen();
+  updateAnts();
+  updateEnemies();
+  updateFood();
+}
+
+function draw() {
+  drawBackground();
+
+  // food
+  food.forEach(f => drawEntity(f.x, f.y, "lime", 3));
+
   // ants
-  ants.forEach(a => drawAnt(a, "white"));
+  ants.forEach(a => drawAnt(a, a.type === "soldier" ? "orange" : "white"));
+
+  // enemies
+  enemies.forEach(e => drawEntity(e.x, e.y, "red", 4));
 
   // queen
   drawAnt(queen, "cyan");
@@ -253,12 +294,10 @@ function draw() {
   ctx.fillStyle = "white";
   ctx.fillText("Food: " + playerFood, 10, 20);
   ctx.fillText("Ants: " + ants.length, 10, 40);
-  ctx.fillText("Move: WASD | Click = spawn ant", 10, 60);
+  ctx.fillText("Enemies: " + enemies.length, 10, 60);
+  ctx.fillText("WASD move | Click worker | Right click soldier", 10, 80);
 }
 
-// ======================
-// LOOP
-// ======================
 function loop() {
   update();
   draw();
