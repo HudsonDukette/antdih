@@ -18,6 +18,8 @@ function update() {
   updateAnts();
   updateEnemies();
 
+  updateColony(); // NEW SYSTEM
+
   queen.x = Math.max(0, Math.min(WORLD_SIZE, queen.x));
   queen.y = Math.max(0, Math.min(WORLD_SIZE, queen.y));
 }

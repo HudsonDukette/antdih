@@ -1,58 +1,5 @@
-function drawAnt(a, color) {
-  if (!a) return;
-
-  let p = worldToScreen(a.x, a.y);
-
-  ctx.save();
-  ctx.translate(p.x, p.y);
-  ctx.rotate(a.angle || 0);
-
-  ctx.fillStyle = color;
-
-  // body segments (simple ant look)
-  ctx.fillRect(-6, -2, 4, 4);
-  ctx.fillRect(-2, -3, 5, 5);
-  ctx.fillRect(4, -2, 4, 4);
-
-  ctx.restore();
-}
-
-function drawWorld() {
-  let x = -camera.x % dirt.width;
-  let y = -camera.y % dirt.height;
-
-  for (let i = -1; i < 3; i++) {
-    for (let j = -1; j < 3; j++) {
-      ctx.drawImage(dirt, x + i * dirt.width, y + j * dirt.height);
-    }
-  }
-}
-
-function drawUI() {
-
-  if (gameState.mode === "menu") {
-    ctx.fillStyle = "black";
-    ctx.globalAlpha = 0.7;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.globalAlpha = 1;
-
-    ctx.fillStyle = "white";
-    ctx.font = "40px Arial";
-    ctx.fillText("ANT WAR", canvas.width / 2 - 100, canvas.height / 2);
-
-    ctx.font = "20px Arial";
-    ctx.fillText("Click to Start", canvas.width / 2 - 70, canvas.height / 2 + 40);
-    return;
-  }
-
-  ctx.fillStyle = "white";
-  ctx.font = "14px Arial";
-  ctx.fillText("Food: " + playerFood, 10, 20);
-  ctx.fillText("Ants: " + ants.length, 10, 40);
-  ctx.fillText("Colonies: " + enemyColonies.length, 10, 60);
-}
-
 function draw() {
+
   drawWorld();
 
   // FOOD
@@ -64,35 +11,52 @@ function draw() {
     ctx.fill();
   }
 
-  // PLAYER ANTS
+  // SURFACE ANTS
   for (let a of ants) {
     drawAnt(a, "white");
   }
 
-  // ENEMY COLONIES (QUEEN + FULL VISUALS)
+  // ENEMIES
   for (let c of enemyColonies) {
-
     let q = c.queen;
-    let qp = worldToScreen(q.x, q.y);
+    let p = worldToScreen(q.x, q.y);
 
-    // queen (slightly bigger + solid, not just pulse)
     ctx.fillStyle = "purple";
     ctx.beginPath();
-    ctx.arc(qp.x, qp.y, 9, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // COLONY SYSTEM (BURROW)
+  if (colony.burrowed) {
+
+    let p = worldToScreen(colony.entrance.x, colony.entrance.y);
+
+    // tunnel entrance
+    ctx.fillStyle = "black";
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
     ctx.fill();
 
-    // draw WORKERS
-    for (let w of c.workers) {
-      drawAnt(w, "orange");
+    // defenders
+    for (let d of colony.defenders) {
+      let dp = worldToScreen(d.x, d.y);
+      ctx.fillStyle = "blue";
+      ctx.beginPath();
+      ctx.arc(dp.x, dp.y, 5, 0, Math.PI * 2);
+      ctx.fill();
     }
 
-    // draw SOLDIERS
-    for (let s of c.soldiers) {
-      drawAnt(s, "red");
+    // eggs
+    for (let e of colony.eggs) {
+      let ep = worldToScreen(e.x, e.y);
+      ctx.fillStyle = "yellow";
+      ctx.beginPath();
+      ctx.arc(ep.x, ep.y, 3, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 
-  // PLAYER QUEEN
   drawAnt(queen, "cyan");
 
   drawUI();
